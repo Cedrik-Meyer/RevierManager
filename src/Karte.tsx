@@ -1,17 +1,25 @@
 import { useEffect, useState } from 'react'
-import { MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
+import { LayersControl, MapContainer, Marker, Popup, TileLayer, useMap } from 'react-leaflet'
 import L from 'leaflet'
 import 'leaflet/dist/leaflet.css'
-import markerIcon2x from 'leaflet/dist/images/marker-icon-2x.png'
-import markerIcon from 'leaflet/dist/images/marker-icon.png'
-import markerShadow from 'leaflet/dist/images/marker-shadow.png'
 
-// Vite bündelt Bilder anders als der klassische Leaflet-Build erwartet,
-// daher müssen die Marker-Bild-URLs hier explizit gesetzt werden.
-L.Icon.Default.mergeOptions({
-  iconRetinaUrl: markerIcon2x,
-  iconUrl: markerIcon,
-  shadowUrl: markerShadow,
+// Leafletes Standard-Icon verweist auf Bilddateien, deren Pfad Vite anders
+// auflöst als der klassische Leaflet-Build erwartet (das "kaputte Bild"-
+// Symbol). Statt das zu reparieren, zeichnen wir den Standort-Marker als
+// eigenes Inline-SVG — ohne externe Bilddatei, also unabhängig vom Bundler.
+const standortIcon = L.divIcon({
+  className: 'standort-icon',
+  html: `<svg viewBox="0 0 24 24" width="32" height="32" xmlns="http://www.w3.org/2000/svg">
+    <path
+      d="M12 2C8.13 2 5 5.13 5 9c0 5.25 7 13 7 13s7-7.75 7-13c0-3.87-3.13-7-7-7zm0 9.5A2.5 2.5 0 1 1 12 6.5a2.5 2.5 0 0 1 0 5z"
+      fill="#e02424"
+      stroke="#7a1414"
+      stroke-width="0.5"
+    />
+  </svg>`,
+  iconSize: [32, 32],
+  iconAnchor: [16, 32],
+  popupAnchor: [0, -28],
 })
 
 // Grobes Zentrum von Niedersachsen, Zoomstufe zeigt das ganze Bundesland.
@@ -117,13 +125,29 @@ function Karte() {
         zoom={NIEDERSACHSEN_ZOOM}
         style={{ height: '100%', width: '100%' }}
       >
-        <TileLayer
-          attribution='&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a>-Mitwirkende'
-          url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
-        />
+        <LayersControl position="topright">
+          <LayersControl.BaseLayer checked name="OpenStreetMap">
+            <TileLayer
+              attribution="&copy; OpenStreetMap-Mitwirkende"
+              url="https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png"
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="TopPlusOpen (BKG)">
+            <TileLayer
+              attribution="&copy; Bundesamt für Kartographie und Geodäsie (BKG), dl-de/by-2-0"
+              url="https://sgx.geodatenzentrum.de/wmts_topplus_open/tile/1.0.0/web/default/WEBMERCATOR/{z}/{y}/{x}.png"
+            />
+          </LayersControl.BaseLayer>
+          <LayersControl.BaseLayer name="Satellit (Esri World Imagery)">
+            <TileLayer
+              attribution="Tiles &copy; Esri &mdash; Quellen: Esri, Maxar, Earthstar Geographics und die GIS-Community"
+              url="https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}"
+            />
+          </LayersControl.BaseLayer>
+        </LayersControl>
         <Kartenzentrierung standort={standort} />
         {standort.status === 'gefunden' && (
-          <Marker position={standort.position}>
+          <Marker position={standort.position} icon={standortIcon}>
             <Popup>Dein Standort</Popup>
           </Marker>
         )}
